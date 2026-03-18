@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ACE-Trainer Live Telemetry</title>
+<!-- Google Fonts: Space Grotesk -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#0d7ff2',
+            accent: '#00ff41', // Neon green safety accent
+            danger: '#ff003c', // Technical red
+            surface: '#121212',
+            card: '#1a1a1a',
+          },
+          fontFamily: {
+            sans: ['Space Grotesk', 'sans-serif'],
+          },
+          borderRadius: {
+            'custom': '16px', // ROUND_FOUR
+          }
+        }
+      }
+    }
+  </script>
+<style data-purpose="textures">/* Subtle Alcantara and Carbon Fiber textures */
+body {
+    background-color: #080808;
+    background-image: radial-gradient(circle at 2px 2px, rgba(255, 255, 255, 0.02) 1px, transparent 0);
+    background-size: 24px 24px;
+    color: #fff;
+    overflow: hidden;
+    /* Technical HUD feel, no scroll */
+    }
+.carbon-bg {
+    background: linear-gradient(45deg, #151515 25%, #1a1a1a 25%, #1a1a1a 50%, #151515 50%, #151515 75%, #1a1a1a 75%, #1a1a1a 100%);
+    background-size: 4px 4px
+    }
+.alcantara-bg {
+    background: linear-gradient(to bottom, #121212, #181818);
+    position: relative
+    }
+.alcantara-bg::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    opacity: 0.1;
+    background-image: url(https://lh3.googleusercontent.com/aida-public/AB6AXuCBq8ujPBloljup3aZpb_drQ9bcpKUsn2lwbtCvXhTcaXY-KnpW5PIoyddi1Iij6-3R1JcBQImGnYS0v4WeIJOs523m6G63wd6-R2K5Uu7KyMVyziX9R8VHc8QWOwjlabuxGgTiHSNVM8fwUjaDgqTd6d01Yf9fIsIJCh6kzH-nM8H5zFXrbJ8NH58BRWQrGybDS9RWzct5pseRNjP6uu4bgGdDRK9pVS1sclsG7Nb0fezk4O-FqiZ7-IMYr3u-60ICwi3kLYWUex0);
+    pointer-events: none
+    }
+.scanline {
+    width: 100%;
+    height: 2px;
+    background: rgba(13, 127, 242, 0.1);
+    position: absolute;
+    animation: scan 8s linear infinite;
+    z-index: 50
+    }
+@keyframes scan {
+    0% {
+        top: 0;
+        } 100% {
+        top: 100%;
+        }
+    }
+.tire-heat-mid {
+    background: linear-gradient(to top, #3b82f6, #f97316)
+    }
+.tire-heat-hot {
+    background: linear-gradient(to top, #f97316, #ef4444)
+    }</style>
+</head>
+<body class="h-full font-sans antialiased select-none">
+<div class="scanline"></div>
+<!-- BEGIN: Main Dashboard Layout -->
+<main class="h-screen flex flex-col p-6 gap-6">
+<!-- BEGIN: Top Bar - Lap Info & RPM -->
+<header class="flex justify-between items-end gap-8" data-purpose="telemetry-header">
+<!-- Left: Session Info -->
+<div class="flex gap-4" data-purpose="session-stats">
+<div class="alcantara-bg border-l-4 border-primary px-4 py-2 rounded-custom">
+<p class="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Lap Time</p>
+<p class="text-3xl font-bold italic">1:24.<span class="text-xl">382</span></p>
+</div>
+<div class="alcantara-bg border-l-4 border-accent px-4 py-2 rounded-custom">
+<p class="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Delta</p>
+<p class="text-3xl font-bold text-accent">-0.142</p>
+</div>
+</div>
+<!-- Center: RPM Bar -->
+<div class="flex-grow flex flex-col gap-1" data-purpose="rpm-display">
+<div class="flex justify-between text-[10px] text-gray-400 font-bold uppercase tracking-tighter">
+<span>0</span><span>2</span><span>4</span><span>6</span><span>8</span><span class="text-danger">10k RPM</span>
+</div>
+<div class="h-8 bg-black/40 border border-white/10 rounded-sm overflow-hidden flex gap-0.5 p-0.5">
+<!-- RPM segments simulated with divs -->
+<div class="flex-grow bg-primary opacity-80"></div>
+<div class="flex-grow bg-primary opacity-80"></div>
+<div class="flex-grow bg-primary opacity-80"></div>
+<div class="flex-grow bg-primary opacity-80"></div>
+<div class="flex-grow bg-primary opacity-80"></div>
+<div class="flex-grow bg-primary opacity-80"></div>
+<div class="flex-grow bg-primary opacity-80"></div>
+<div class="flex-grow bg-primary"></div>
+<div class="flex-grow bg-primary"></div>
+<div class="flex-grow bg-accent"></div>
+<div class="flex-grow bg-accent"></div>
+<div class="flex-grow bg-accent animate-pulse"></div>
+<div class="flex-grow bg-danger"></div>
+<div class="flex-grow bg-danger"></div>
+</div>
+</div>
+<!-- Right: Fuel Info -->
+<div class="alcantara-bg border-r-4 border-danger px-4 py-2 rounded-custom text-right">
+<p class="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Fuel Remaining</p>
+<p class="text-3xl font-bold">14.2 <span class="text-sm text-gray-400">L</span></p>
+</div>
+</header>
+<!-- END: Top Bar -->
+<!-- BEGIN: Central Dashboard Body -->
+<div class="flex-grow grid grid-cols-12 gap-6 items-center">
+<!-- Left Column: Misc Stats -->
+<aside class="col-span-3 flex flex-col gap-4">
+<div class="carbon-bg p-4 rounded-custom border border-white/5">
+<h3 class="text-xs font-bold text-primary mb-2 uppercase tracking-widest">Brake Temps</h3>
+<div class="space-y-3">
+<div class="flex justify-between items-center">
+<span class="text-sm text-gray-400">FL</span>
+<span class="font-mono text-lg text-accent">542°C</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-sm text-gray-400">FR</span>
+<span class="font-mono text-lg text-accent">538°C</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-sm text-gray-400">RL</span>
+<span class="font-mono text-lg">410°C</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-sm text-gray-400">RR</span>
+<span class="font-mono text-lg">408°C</span>
+</div>
+</div>
+</div>
+<div class="alcantara-bg p-4 rounded-custom border border-white/5">
+<h3 class="text-xs font-bold text-primary mb-2 uppercase tracking-widest">DRS / ERS</h3>
+<div class="h-2 bg-gray-800 rounded-full overflow-hidden mb-2">
+<div class="h-full bg-primary" style="width: 65%;"></div>
+</div>
+<div class="flex justify-between text-[10px] font-bold">
+<span class="text-primary">DEPLOYMENT READY</span>
+<span>65%</span>
+</div>
+</div>
+</aside>
+<!-- Center: Gear & Tire Visualization -->
+<section class="col-span-6 flex flex-col items-center justify-center relative" data-purpose="main-visualization">
+<!-- Gear Indicator -->
+<div class="mb-8 text-center">
+<span class="text-[160px] font-black leading-none italic select-none text-white drop-shadow-[0_0_30px_rgba(13,127,242,0.4)]">4</span>
+<div class="text-xl font-bold tracking-[1em] text-primary -mt-4">GEAR</div>
+</div>
+<!-- Tire Visualization Wrapper -->
+<div class="relative w-80 h-96 border-x-2 border-white/5 flex flex-wrap justify-between p-4" data-purpose="tire-grid">
+<!-- Front Left -->
+<div class="w-24 h-40 rounded-lg flex flex-col justify-between p-2 tire-heat-mid border-2 border-white/20 shadow-lg shadow-orange-500/20">
+<span class="text-[10px] font-bold">FL</span>
+<div class="text-center">
+<div class="text-lg font-bold">88°</div>
+<div class="text-[10px] opacity-70">28.4 PSI</div>
+</div>
+</div>
+<!-- Front Right -->
+<div class="w-24 h-40 rounded-lg flex flex-col justify-between p-2 tire-heat-hot border-2 border-white/20 shadow-lg shadow-red-500/20">
+<span class="text-[10px] font-bold">FR</span>
+<div class="text-center">
+<div class="text-lg font-bold">96°</div>
+<div class="text-[10px] opacity-70">28.9 PSI</div>
+</div>
+</div>
+<!-- Rear Left -->
+<div class="w-24 h-40 rounded-lg flex flex-col justify-between p-2 tire-heat-mid border-2 border-white/20 shadow-lg shadow-orange-500/20 mt-4">
+<span class="text-[10px] font-bold">RL</span>
+<div class="text-center">
+<div class="text-lg font-bold">84°</div>
+<div class="text-[10px] opacity-70">27.8 PSI</div>
+</div>
+</div>
+<!-- Rear Right -->
+<div class="w-24 h-40 rounded-lg flex flex-col justify-between p-2 tire-heat-mid border-2 border-white/20 shadow-lg shadow-orange-500/20 mt-4">
+<span class="text-[10px] font-bold">RR</span>
+<div class="text-center">
+<div class="text-lg font-bold">82°</div>
+<div class="text-[10px] opacity-70">27.6 PSI</div>
+</div>
+</div>
+<!-- Center Chassis Indicator -->
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-64 border-y border-white/10 flex items-center justify-center">
+<div class="w-0.5 h-full bg-white/5"></div>
+</div>
+</div>
+</section>
+<!-- Right Column: Speed & Dynamics -->
+<aside class="col-span-3 flex flex-col gap-4">
+<div class="carbon-bg p-6 rounded-custom border-r-4 border-primary">
+<p class="text-xs font-bold text-gray-500 uppercase tracking-widest">Speed</p>
+<div class="flex items-baseline gap-2">
+<span class="text-6xl font-bold tracking-tighter italic">248</span>
+<span class="text-xl text-primary font-bold">KM/H</span>
+</div>
+</div>
+<div class="alcantara-bg p-4 rounded-custom border border-white/5">
+<h3 class="text-xs font-bold text-primary mb-4 uppercase tracking-widest">G-Force</h3>
+<div class="flex justify-center items-center py-4">
+<!-- G-Force Ball Visual -->
+<div class="w-32 h-32 border border-white/20 rounded-full relative flex items-center justify-center">
+<div class="absolute w-full h-[1px] bg-white/10"></div>
+<div class="absolute h-full w-[1px] bg-white/10"></div>
+<div class="w-4 h-4 bg-accent rounded-full shadow-[0_0_15px_#00ff41] absolute" style="top: 20%; left: 70%;"></div>
+<div class="absolute bottom-1 right-2 text-[10px] text-gray-500">2.4G</div>
+</div>
+</div>
+</div>
+<div class="carbon-bg p-4 rounded-custom border border-white/5">
+<h3 class="text-xs font-bold text-primary mb-2 uppercase tracking-widest">Track Temp</h3>
+<p class="text-2xl font-bold">34.5<span class="text-sm text-gray-400">°C</span></p>
+<p class="text-[10px] text-accent font-bold mt-1 uppercase">Optimal Grip</p>
+</div>
+</aside>
+</div>
+<!-- END: Central Dashboard Body -->
+<!-- BEGIN: Footer - System Status -->
+<footer class="flex justify-between items-center px-4 py-2 border-t border-white/10" data-purpose="system-footer">
+<div class="flex gap-6 items-center">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-accent animate-pulse"></div>
+<span class="text-[10px] font-bold tracking-widest uppercase text-gray-400">Live Telemetry Active</span>
+</div>
+<div class="text-[10px] font-bold tracking-widest uppercase text-gray-600">Sync: 120Hz</div>
+</div>
+<div class="flex gap-4">
+<div class="px-3 py-1 bg-white/5 rounded text-[10px] font-bold text-gray-400 border border-white/10 uppercase">
+          TC: <span class="text-primary">Level 2</span>
+</div>
+<div class="px-3 py-1 bg-white/5 rounded text-[10px] font-bold text-gray-400 border border-white/10 uppercase">
+          ABS: <span class="text-primary">On</span>
+</div>
+<div class="px-3 py-1 bg-white/5 rounded text-[10px] font-bold text-gray-400 border border-white/10 uppercase">
+          Map: <span class="text-primary">Aggressive</span>
+</div>
+</div>
+<div class="text-[10px] font-bold tracking-widest uppercase text-gray-400">
+        ACE-Trainer // PC_PRO_BUILD_v2.4
+      </div>
+</footer>
+<!-- END: Footer -->
+</main>
+<!-- END: Main Dashboard Layout -->
+<script data-purpose="telemetry-sim">
+    // Script to add minor jitter to values to make it feel "live"
+    document.addEventListener('DOMContentLoaded', () => {
+      const speedEl = document.querySelector('.text-6xl');
+      const deltaEl = document.querySelector('.text-accent');
+      
+      setInterval(() => {
+        // Speed jitter
+        if(speedEl) {
+          const currentSpeed = parseInt(speedEl.innerText);
+          const jitter = Math.floor(Math.random() * 3) - 1;
+          speedEl.innerText = currentSpeed + jitter;
+        }
+      }, 200);
+    });
+  </script>
+</body></html>
