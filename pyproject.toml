@@ -39,6 +39,11 @@ gui = [
     "PyQt6>=6.10.0",
 ]
 
+# Note: To run the GUI, use:
+#   python src/gui/main_window.py --mock
+# or after installing with pip install -e ".[gui]":
+#   python -m telemetry.gui.main_window --mock
+
 [tool.hatch.build.targets.wheel]
 packages = ["telemetry"]
 src = "src"
