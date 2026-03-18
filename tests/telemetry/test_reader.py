@@ -89,6 +89,11 @@ class TestMockSharedMemoryReader:
         assert isinstance(physics.steering, float)
         assert isinstance(physics.tire_pressure, list)
         assert len(physics.tire_pressure) == 4
+        assert isinstance(physics.tire_temperature, list)
+        assert len(physics.tire_temperature) == 12  # 4 tires × 3 temperature readings
+        # Tire wear
+        assert isinstance(physics.tire_wear, list)
+        assert len(physics.tire_wear) == 4
 
     def test_graphics_data_types(self, reader: MockSharedMemoryReader) -> None:
         """GraphicsData fields have correct types."""
@@ -114,22 +119,33 @@ class TestMockSharedMemoryReader:
 
         assert 0 <= physics.rpm <= 20000
         assert 0.0 <= physics.speed <= 300.0
-        assert -1 <= physics.gear <= 10
+        assert 1 <= physics.gear <= 6  # realistic gear range
         assert len(physics.tire_pressure) == 4
         for pressure in physics.tire_pressure:
-            assert 10.0 <= pressure <= 50.0
+            assert 25.0 <= pressure <= 35.0  # realistic pressures after warmup
+
+        # Tire temperatures: 12 values total, should be between 50 and 120 C after warmup
+        assert len(physics.tire_temperature) == 12
+        for temp in physics.tire_temperature:
+            assert 50.0 <= temp <= 120.0
+
+        # Fuel should be positive and less than capacity
+        assert 0.0 <= physics.fuel_level <= 120.0
+
+        # Lap times reasonable for a GT3 car at Monza
+        assert 80.0 <= physics.lap_time <= 100.0
 
     def test_mock_data_changes_over_time(self, reader: MockSharedMemoryReader) -> None:
         """Subsequent reads produce varying data (simulates live telemetry)."""
         data1 = reader.read()
         data2 = reader.read()
 
-        # RPM and speed should change (since counter increments)
-        # Note: could be same if poll interval very small, but unlikely over several reads
+        # At least one of these should change
         rpm_changed = data1[0].rpm != data2[0].rpm
         speed_changed = data1[0].speed != data2[0].speed
-        # At least one should change across multiple reads
-        assert rpm_changed or speed_changed
+        gear_changed = data1[0].gear != data2[0].gear
+        # Given our simulation, something should vary
+        assert rpm_changed or speed_changed or gear_changed
 
     def test_deterministic_with_seed(self) -> None:
         """Same seed produces identical data sequence."""
@@ -142,6 +158,8 @@ class TestMockSharedMemoryReader:
         for d1, d2 in zip(data1_seq, data2_seq):
             assert d1[0].rpm == d2[0].rpm
             assert d1[0].speed == d2[0].speed
+            assert d1[0].gear == d2[0].gear
+            assert d1[0].fuel_level == d2[0].fuel_level
 
     def test_different_seeds_produce_different_data(self) -> None:
         """Different seeds yield different data sequences."""

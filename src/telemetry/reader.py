@@ -162,56 +162,135 @@ class MockSharedMemoryReader(SharedMemoryReader):
         self._seed = seed
         self._counter = 0  # Increments each read()
         self._lock = threading.RLock()
+        # Session state for realistic simulation
+        self._lap_start_counter = 0  # Counter value at start of current lap
+        self._last_lap_counter = 0   # Counter value at completion of last lap
+        self._lap_times: list[float] = []  # Historical lap times
         # Auto-detect variant if not forced (mock always returns AC)
         if self._game_variant is None:
             self._game_variant = self._detect_game_variant()
 
     def read(self) -> tuple[PhysicsData, GraphicsData, StaticData]:
-        """Generate synthetic telemetry data.
+        """Generate realistic synthetic telemetry data.
 
-        Returns:
-            Tuple of (physics, graphics, static) with realistic patterns.
+        Simulates a proper race session:
+        - First 3 laps: tires cold (60-80°C), lap times decreasing
+        - After lap 3: tires reach operating temp (90-110°C)
+        - Fuel decreases linearly
+        - Lap times vary with slight random noise around a baseline
+        - Throttle/brake patterns simulate actual driving (coasting, braking zones)
         """
         with self._lock:
             self._counter += 1
             t = self._counter * DEFAULT_POLL_INTERVAL
 
-            # Simulate varying RPM (idle ~1000, redline ~15000)
-            rpm = int(1000 + 14000 * (0.5 + 0.5 * (t % 10) / 10))
+            # Time-based sine wave for smooth variations (simulates lap progression)
+            time_wave = (t % 60) / 60.0 * 2 * 3.14159
 
-            # Simulate speed (0-250 km/h)
-            speed = 250.0 * (t % 20) / 20.0
+            # === RPM and Speed with more realistic envelope ===
+            # RPM oscillates between idle and redline based on track position
+            rpm_base = 2000 + 13000 * (0.3 + 0.7 * abs((t % 20) / 20.0 - 0.5) * 2)
+            rpm_noise = 200 * (0.5 - 0.5 * (t % 1))  # vibration effect
+            rpm = int(rpm_base + rpm_noise)
 
-            # Simulate gear (1-7, cycling)
-            gear = (int(t) % 7) + 1
+            # Speed correlates with gear and RPM, but also varies by track position
+            speed_base = 180.0 * (rpm / 15000)  # 0-180 km/h proportional to RPM
+            speed = max(0.0, speed_base + 30.0 * (t % 5) / 5.0 - 15.0)  # ±30 variation
+
+            # Gear calculation based on speed (more realistic)
+            if speed < 40:
+                gear = 1
+            elif speed < 80:
+                gear = 2
+            elif speed < 120:
+                gear = 3
+            elif speed < 160:
+                gear = 4
+            elif speed < 200:
+                gear = 5
+            else:
+                gear = 6
+
+            # Throttle and brake are anti-correlated with some randomness
+            # Simulate: accelerating on straights, braking at corners
+            throttle_phase = (t % 15) / 15.0
+            if throttle_phase < 0.6:
+                throttle = 0.7 + 0.3 * (throttle_phase / 0.6)
+                brake = 0.0
+            else:
+                throttle = 0.0
+                brake = 0.6 + 0.4 * ((throttle_phase - 0.6) / 0.4)
+
+            # Lap counting: a lap takes about 90 seconds at 60Hz = ~5400 counter steps
+            LAP_COUNTER_STEPS = int(90 / DEFAULT_POLL_INTERVAL)  # ~5400
+            lap = self._counter // LAP_COUNTER_STEPS
+            lap_elapsed = (self._counter % LAP_COUNTER_STEPS) * DEFAULT_POLL_INTERVAL
+
+            # Lap time: base 88 seconds (good lap) + noise + first 3 laps slower
+            base_lap_time = 88.0 if lap >= 3 else 92.0 - lap * 1.5  # improvement over first laps
+            lap_time = base_lap_time + 0.5 * (t % 10)  # small variations
+
+            # Track last lap time when lap completes
+            if self._counter > 0 and self._counter % LAP_COUNTER_STEPS == 0:
+                self._last_lap_counter = self._counter
+                self._lap_times.append(lap_time)
+                if len(self._lap_times) > 5:
+                    self._lap_times = self._lap_times[-5:]
+
+            # Best lap time is the minimum of historical laps
+            best_lap_time = min(self._lap_times) if self._lap_times else base_lap_time
+            delta_to_best = lap_time - best_lap_time
+
+            # Tire temperatures: after 3 laps, they heat up to 90-110°C range
+            warmup_factor = min(1.0, max(0.0, (lap - 2) / 2.0))  # 0 for laps 0-2, ramp to 1 by lap 4
+            base_temp = 65.0 + 45.0 * warmup_factor  # 65°C cold, 110°C hot
+            # Add variation per tire and per section (inner/center/outer)
+            tire_temps = []
+            for i in range(4):
+                # Front tires hotter due to braking
+                base_offset = 5.0 if i < 2 else -5.0
+                inner = base_temp + base_offset + 3.0
+                center = base_temp + base_offset
+                outer = base_temp + base_offset - 3.0
+                tire_temps.append([inner, center, outer])
+
+            # Flatten to 12-element array
+            tire_temperature_flat = [temp for tire in tire_temps for temp in tire]
+
+            # Tire pressures: slightly dropping as tires wear/heated
+            pressures = [32.0 - 0.1 * lap, 32.0 - 0.1 * lap, 30.5 - 0.05 * lap, 30.5 - 0.05 * lap]
+
+            # Fuel level: linear consumption ~2.5L per lap
+            fuel_level = 120.0 - lap * 2.5 - (lap_elapsed / 90.0) * 2.5
+            fuel_level = max(0.0, fuel_level)
 
             physics = PhysicsData(
                 rpm=rpm,
                 speed=speed,
                 gear=gear,
-                throttle=0.8 if gear > 1 else 0.0,
-                brake=0.1 if gear > 2 else 0.0,
+                throttle=throttle,
+                brake=brake,
                 clutch=0.0,
-                steering=5.0 * (t % 2 - 1),  # oscillate -5 to +5
+                steering=10.0 * (t % 3 - 1.5),  # ±15° steering
                 pos_x=0.0,
                 pos_y=0.0,
                 pos_z=0.0,
-                vel_x=speed / 3.6,  # km/h to m/s
+                vel_x=speed / 3.6,
                 vel_y=0.0,
                 vel_z=0.0,
                 acc_x=0.0,
                 acc_y=0.0,
                 acc_z=0.0,
-                tire_pressure=[32.5, 32.5, 30.0, 30.0],  # Front/Rear psi
-                tire_temperature=[[90.0, 100.0, 90.0]] * 4,  # inner/center/outer
-                tire_wear=[0.05, 0.05, 0.05, 0.05],
+                tire_pressure=pressures,
+                tire_temperature=tire_temperature_flat,
+                tire_wear=[0.02 * lap, 0.02 * lap, 0.015 * lap, 0.015 * lap],
                 suspension_position=[0.0, 0.0, 0.0, 0.0],
                 suspension_velocity=[0.0, 0.0, 0.0, 0.0],
                 front_wing_setting=2,
                 rear_wing_setting=3,
-                fuel_level=120.0 - t * 0.1,  # slowly decreasing
-                lap=int(t // 60) + 1,
-                lap_time=90.0 + (t % 10),
+                fuel_level=fuel_level,
+                lap=lap + 1,
+                lap_time=lap_time,
                 sector=1,
                 is_on_track=True,
                 is_rewinding=False,
@@ -222,13 +301,13 @@ class MockSharedMemoryReader(SharedMemoryReader):
                 display_rpm=rpm,
                 display_gear=gear,
                 shift_light=rpm > 13000,
-                rev_limiter=False,
-                current_lap=physics.lap,
+                rev_limiter=rpm > 14500,
+                current_lap=lap + 1,
                 total_laps=10,
-                current_lap_time=physics.lap_time,
-                last_lap_time=89.5,
-                best_lap_time=88.2,
-                delta_to_best=physics.lap_time - 88.2,
+                current_lap_time=lap_time,
+                last_lap_time=self._last_lap_counter / LAP_COUNTER_STEPS if self._last_lap_counter else 0.0,
+                best_lap_time=best_lap_time,
+                delta_to_best=delta_to_best,
                 flag=0,
                 pit_limiter=False,
                 yellow_danger=False,
@@ -240,10 +319,10 @@ class MockSharedMemoryReader(SharedMemoryReader):
                 car_model="Ferrari 488 GT3",
                 car_skins=10,
                 tire_compound="slick",
-                tire_size=[305/30, 71, 18] * 4,
+                tire_size=[305.0, 30.0, 18.0] * 4,
                 driver_name="Test Driver",
                 driver_nationality="ITA",
-                session_type=2,  # race
+                session_type=2,
                 track_name="Monza",
                 track_length=5793.0,
                 weather="Clear",
