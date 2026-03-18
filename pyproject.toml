@@ -22,16 +22,21 @@ classifiers = [
     "Topic :: System :: Hardware",
 ]
 dependencies = [
-    # Pure Python stdlib only — no external runtime dependencies
+    # Core runtime dependencies (none, pure stdlib)
 ]
 
 [project.optional-dependencies]
+# Development and testing dependencies
 dev = [
     "pytest>=8.0.0",
     "pytest-cov>=4.0.0",
     "mypy>=1.8.0",
     "black>=24.4.0",
     "ruff>=0.4.0",
+]
+# GUI dependencies for the telemetry dashboard
+gui = [
+    "PyQt6>=6.10.0",
 ]
 
 [tool.hatch.build.targets.wheel]
