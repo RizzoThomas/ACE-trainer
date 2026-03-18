@@ -1,0 +1,22 @@
+{
+  "id": "shared-memory-core_20250318",
+  "title": "Shared Memory Core Module",
+  "type": "feature",
+  "status": "pending",
+  "created": "2025-03-18T10:00:00.000Z",
+  "updated": "2025-03-18T10:00:00.000Z",
+  "branch": "feature/shared-memory-core_20250318",
+  "phases": {
+    "total": 5,
+    "completed": 0,
+    "names": ["foundation", "parsing", "robustness", "testing", "final_verification"]
+  },
+  "tasks": {
+    "total": 40,
+    "completed": 0
+  },
+  "acceptance_criteria_total": 9,
+  "acceptance_criteria_completed": 0,
+  "spec_approved": true,
+  "plan_approved": true
+}

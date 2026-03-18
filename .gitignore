@@ -1,0 +1,51 @@
+# Virtual environments
+.venv/
+env/
+venv/
+ENV/
+virtualenv/
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.wheel
+*.manifest
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Linter / formatter
+.ruff_cache/
+.mypy_cache/
+.typeshed/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Local env vars
+.env
+.env.local
+.env.*.local
+
+# Project-specific
+# (Any additional files specific to this project)
